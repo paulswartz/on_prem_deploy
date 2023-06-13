@@ -20,7 +20,13 @@ echo
 echo > "$tmpdir"/config/vendor-data
 
 rm -f "$tmpdir"/"$HOSTNAME".iso
-hdiutil makehybrid -o "$tmpdir"/"$HOSTNAME".iso -hfs -joliet -iso -default-volume-name cidata "$tmpdir"/config/
+if which genisoimage > /dev/null; then
+    # POSIX
+    genisoimage -J -V cidata -o "$tmpdir"/"$HOSTNAME".iso "$tmpdir"/config
+else
+    # macOS
+    hdiutil makehybrid -o "$tmpdir"/"$HOSTNAME".iso -hfs -joliet -iso -default-volume-name cidata "$tmpdir"/config/
+fi
 rm -r "$tmpdir"/config
 
 echo Built "$tmpdir"/"$HOSTNAME".iso

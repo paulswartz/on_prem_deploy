@@ -6,12 +6,15 @@ set -e
 ISO_PATH=ubuntu-22.04-server-cloudimg-amd64.img
 ISO_URL=https://cloud-images.ubuntu.com/releases/jammy/release/"$ISO_PATH"
 
-if [ "$(arch)" = "arm64" ]; then
-   QEMU_CPU=max
-   QEMU_MACHINE=q35
-else
-   QEMU_CPU=host
-   QEMU_MACHINE="accel=hvf"
+ARCH=$(arch)
+QEMU_CPU=max
+QEMU_MACHINE=q35
+
+if [ "$ARCH" = "i386" ] || [ "$ARCH" = "x86-64" ]; then
+   if qemu-system-x86_64 -accel help | grep -q hvf; then
+      QEMU_CPU=host
+      QEMU_MACHINE="accel=hvf"
+   fi
 fi
 
 HOSTNAME=${1:-qemu}
@@ -22,7 +25,7 @@ if [ -f "$tmpdir"/boot-disk.img ]; then
    echo Boot disk exists, not rebuilding...
 else
    pushd "$tmpdir" >/dev/null
-   wget -cN "$ISO_URL"
+   wget --quiet -cN "$ISO_URL"
 
    cp $ISO_PATH boot-disk.img
    qemu-img resize boot-disk.img +4G
@@ -38,6 +41,8 @@ qemu-system-x86_64 \
 	 -cpu $QEMU_CPU \
 	 -smp 2 \
 	 -m 1024 \
+	 -nodefaults \
 	 -nographic \
+     -serial stdio \
 	 -hda "$tmpdir"/boot-disk.img \
 	 -cdrom "$tmpdir"/"$HOSTNAME".iso

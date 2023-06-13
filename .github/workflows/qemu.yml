@@ -1,0 +1,51 @@
+name: Build QEMU image
+
+on:
+  push:
+    paths:
+      - linux/**
+      - .github/workflows/qemu.yml
+
+jobs:
+  QEMU:
+    runs-on: ubuntu-latest
+    env:
+      QEMU_HOSTNAME: github
+      GITHUB_REPO: ${{ github.repository }}
+      GIT_BRANCH: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install QEMU
+        run: |
+          n=0
+          until [ "$n" -ge 5 ]; do
+            success=1
+            sudo apt update && \
+            sudo apt install -y genisoimage qemu-system qemu-utils && \
+            break || success=0
+            n=$((n+1))
+            sleep 1
+          done
+          [ $success -eq 1 ] || exit 1
+      - name: run_qemu.sh
+        working-directory: linux
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        shell: /usr/bin/expect -f "{0}"
+        run: |
+          set timeout 60
+          exec rm tmp/boot-disk.img tmp/github.iso
+          spawn -noecho bash run_qemu.sh github
+          expect {
+            timeout {
+              send_user "timeout!\n"
+              abort
+            }
+            eof {
+              send_user "EOF!\n"
+              abort
+            }
+            "Cloud-init * finished" closed
+            OK exp_continue
+            cloud-init exp_continue
+          }
