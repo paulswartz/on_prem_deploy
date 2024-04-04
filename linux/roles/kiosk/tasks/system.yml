@@ -3,6 +3,7 @@
 - name: Ensure kiosk requirements are installed
   ansible.builtin.apt:
     name:
+      - ubuntu-desktop
       - gstreamer1.0-libav
       - unclutter
 
